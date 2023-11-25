@@ -1,0 +1,140 @@
+---
+title: "IDS project"
+author: "WYX"
+date: "2023-11-24"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+- merge all datasets
+
+```{r}
+stay <- read.csv("D:/Study/Rstudio homework/Final-Project/data/Length of Stay.csv")
+readmission <- read.csv("D:/Study/Rstudio homework/Final-Project/data/Readmission.csv")
+rii <- read.csv("D:/Study/Rstudio homework/Final-Project/data/Relative Index of Inequality.csv")
+diagnois <- read.csv("D:/Study/Rstudio homework/Final-Project/data/Diagnosis.csv")
+
+df <- merge(stay, readmission, by=c('FinancialYear', 'HBT', 'Dataset'))
+df <- merge(df, rii, by.x=c('FinancialYear', 'HBT', 'Dataset'), by.y=c('FinancialYear', 'Country', 'Dataset'))
+df <- merge(df, diagnois, by=c('FinancialYear', 'HBT', 'Dataset'))
+```
+- Convert the relevant columns to numeric
+
+```{r}
+# Convert the relevant columns to numeric
+df$PercentageOfReadmissionsWithin133Days <- as.numeric(df$PercentageOfReadmissionsWithin133Days)
+df$LengthOfStay <- as.factor(df$LengthOfStay)
+```
+
+- Plot 1: Bar plot of Length of Stay vs. Percentage of Readmissions
+
+```{r}
+# Load necessary libraries
+library(ggplot2)
+library(dplyr)
+library(corrplot)
+library(reshape2)
+# Plot 1: Bar plot of Length of Stay vs. Percentage of Readmissions
+plot1 <- ggplot(df, aes(x = LengthOfStay, y = PercentageOfReadmissionsWithin133Days)) +
+  geom_bar(stat = "identity", fill = "steelblue") +
+  labs(x = "Length of Stay", y = "Percentage of Readmissions") +
+  ggtitle("Percentage of Readmissions by Length of Stay")
+plot1
+```
+
+- Scatter plot of Number of Stays vs. Percentage of Readmissions
+
+```{r}
+# Plot 2: Scatter plot of Number of Stays vs. Percentage of Readmissions
+plot2 <- ggplot(df, aes(x = NumberOfStays, y = PercentageOfReadmissionsWithin133Days)) +
+  geom_point(color = "steelblue") +
+  labs(x = "Number of Stays", y = "Percentage of Readmissions") +
+  ggtitle("Percentage of Readmissions by Number of Stays")
+plot2
+```
+
+- Box plot of HBT (Health Board Team) vs. Percentage of Readmissions
+
+```{r}
+# Plot 3: Box plot of HBT (Health Board Team) vs. Percentage of Readmissions
+plot3 <- ggplot(df, aes(x = HBT, y = PercentageOfReadmissionsWithin133Days)) +
+  geom_boxplot(fill = "steelblue") +
+  labs(x = "HBT", y = "Percentage of Readmissions") +
+  ggtitle("Percentage of Readmissions by HBT")
+plot3
+```
+
+- Compare the distribution of "DischargeCount" across different "HBT" categories.
+
+```{r}
+ggplot(df, aes(x = HBT, y = DischargeCount)) +
+  geom_boxplot()
+```
+
+- Visualize the distribution of "DischargeCount".
+
+```{r}
+ggplot(df, aes(x = DischargeCount)) +
+  geom_histogram()
+```
+
+- Compare the distribution of "PatientsCount" across different "Dataset" categories.
+
+```{r}
+ggplot(df, aes(x = Dataset, y = PatientsCount)) +
+  geom_violin()
+```
+
+- Visualize the composition of "ICD10Codes" within each "FinancialYear"
+
+```{r}
+ggplot(df, aes(x = FinancialYear, fill = ICD10Codes)) +
+  geom_bar()
+```
+
+- Scatter Plot with Trendline
+
+```{r}
+ggplot(df, aes(x = Discharges, y = Patients)) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE)
+```
+
+- Compare the "PercentageOfReadmissionsWithin28Days" and "PercentageOfReadmissionsWithin133Days" for each "FinancialYear"
+
+```{r}
+ggplot(df, aes(x = FinancialYear)) +
+  geom_bar(aes(y = PercentageOfReadmissionsWithin28Days), position = "dodge", stat = "identity") +
+  geom_bar(aes(y = PercentageOfReadmissionsWithin133Days), position = "dodge", stat = "identity", fill = "red")
+```
+
+- Find the most correlated variable
+
+```{r}
+# Select only the numeric variables
+numeric_vars <- sapply(df, is.numeric)
+numeric_df <- df[, numeric_vars]
+
+# Calculate the correlation matrix
+cor_matrix <- cor(numeric_df)
+
+# Convert the correlation matrix to a long format
+melted_cor_matrix <- melt(cor_matrix)
+
+# Plot the correlation matrix as a heatmap
+ggplot(melted_cor_matrix, aes(x = Var1, y = Var2, fill = value)) +
+  geom_tile() +
+  scale_fill_gradient(low = "blue", high = "red") +
+  labs(x = "Variables", y = "Variables", title = "Correlation Matrix Heatmap")
+
+# Get the variable most correlated with the target variable
+max_corr <- which.max(abs(cor_matrix["PercentageOfReadmissionsWithin133Days", -3]))
+
+# Print the variable name and correlation value
+cat("The variable most correlated with the target variable is:", colnames(cor_matrix)[-3][max_corr], "\n")
+cat("Correlation value:", cor_matrix["PercentageOfReadmissionsWithin133Days", -3][max_corr], "\n")
+```
